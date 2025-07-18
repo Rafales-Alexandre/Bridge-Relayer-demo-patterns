@@ -1,45 +1,45 @@
 # Blockchain Bridge Demo
 
-Ce dépôt démontre un mécanisme simple de bridge blockchain utilisant des smart contracts Solidity et un relayer off-chain en TypeScript. Il permet de transférer des tokens ERC20 entre deux chaînes simulées en verrouillant/brûlant d’un côté et en mintant/libérant de l’autre. L’ensemble utilise Hardhat pour le développement et les tests locaux.
+This repository demonstrates a simple blockchain bridge mechanism using Solidity smart contracts and a TypeScript-based off-chain relayer. It allows transferring ERC20 tokens between two simulated chains by locking/burning on one side and minting/releasing on the other. The setup uses Hardhat for local development and testing.
 
-> **⚠️ Ceci est un exemple pédagogique — non prêt pour la production. Auditez toujours le code avant toute utilisation réelle.**
-
----
-
-## Fonctionnement du Bridge
-
-1. **Source Chain** : Verrouille les tokens originaux et émet un événement.
-2. **Relayer** : Écoute les événements et déclenche les actions sur la chaîne de destination.
-3. **Destination Chain** : Mint les tokens "wrapped" sur le bridge aller ; brûle les tokens wrapped et émet un événement pour le retour.
+> **⚠️ This is a pedagogical example — not production-ready. Always audit code before any real use.**
 
 ---
 
-## Prérequis
+## How the Bridge Works
 
-- Node.js (v18+ recommandé)
-- npm ou yarn
-- Connaissances de base en Solidity, TypeScript et développement Ethereum
+1. **Source Chain**: Locks original tokens and emits an event.
+2. **Relayer**: Listens for events and triggers actions on the destination chain.
+3. **Destination Chain**: Mints wrapped tokens on the forward bridge; burns wrapped tokens and emits for the reverse.
+
+---
+
+## Prerequisites
+
+- Node.js (v18+ recommended)
+- npm or yarn
+- Basic knowledge of Solidity, TypeScript, and Ethereum development
 
 ---
 
 ## Installation
 
-Clonez le dépôt :
+Clone the repository:
 
 ```bash
 git clone <your-repo-url>
 cd bridge-demo
 ```
 
-Installez les dépendances :
+Install dependencies:
 
 ```bash
 npm install
 ```
 
-Cela inclut Hardhat, Ethers.js, les contrats OpenZeppelin, les outils TypeScript et les librairies de test.
+This includes Hardhat, Ethers.js, OpenZeppelin contracts, TypeScript tools, and testing libraries.
 
-Compilez les contrats Solidity :
+Compile the Solidity contracts:
 
 ```bash
 npx hardhat compile
@@ -47,30 +47,30 @@ npx hardhat compile
 
 ---
 
-## Structure du projet
+## Project Structure
 
 ```
-contracts/           # Fichiers Solidity
-  ├─ MockToken.sol         # ERC20 pour les tests sur la source
-  ├─ BridgeSourceChain.sol # Gère le lock/release
-  └─ BridgeDestinationChain.sol # Mint/burn des tokens wrapped
-scripts/            # Scripts TypeScript
-  ├─ deploy.ts            # Déploie tous les contrats
-  ├─ transfer-tokens.ts   # Transfère des tokens MockToken à un utilisateur
-  ├─ relayer-test.ts      # Test automatisé du bridge complet
-  └─ relayer.ts           # Relayer off-chain (écoute et relaye les events)
-test/               # Tests unitaires TypeScript
-  └─ Bridge.test.ts       # Tests des interactions de contrats
-hardhat.config.ts   # Configuration Hardhat
+contracts/           # Solidity files
+  ├─ MockToken.sol         # ERC20 for testing on the source
+  ├─ BridgeSourceChain.sol # Handles lock/release
+  └─ BridgeDestinationChain.sol # Mint/burn wrapped tokens
+scripts/            # TypeScript scripts
+  ├─ deploy.ts            # Deploys all contracts
+  ├─ transfer-tokens.ts   # Transfers MockTokens to a user
+  ├─ relayer-test.ts      # Automated full bridge test
+  └─ relayer.ts           # Off-chain relayer (listens and relays events)
+test/               # TypeScript unit tests
+  └─ Bridge.test.ts       # Contract interaction tests
+hardhat.config.ts   # Hardhat configuration
 ```
 
 ---
 
-## Explications du Code
+## Code Explanation
 
 ### BridgeSourceChain.sol (Source Chain)
 
-Ce contrat gère le verrouillage des tokens sur la chaîne source et la libération lors du bridge retour. Il utilise un token ERC20 externe et restreint la libération au relayer.
+This contract manages token locking on the source chain and releasing on reverse bridging. It uses an external ERC20 token and restricts releases to the relayer.
 
 ```solidity
 contract BridgeSourceChain {
@@ -96,12 +96,12 @@ contract BridgeSourceChain {
 }
 ```
 
-- **lock** : Transfère les tokens de l’utilisateur vers le contrat (verrouillage) et émet `TokenLocked`.
-- **release** : Appelable uniquement par le relayer ; transfère les tokens verrouillés à l’utilisateur.
+- **lock**: Transfers tokens from the user to the contract (locking them) and emits `TokenLocked`.
+- **release**: Only callable by the relayer; transfers locked tokens back to the user.
 
 ### BridgeDestinationChain.sol (Destination Chain)
 
-Ce contrat gère le mint des tokens wrapped sur la chaîne de destination et le burn pour le bridge retour. Il utilise une interface `IWrappedToken`.
+This contract manages minting wrapped tokens on the destination chain and burning for reverse bridging. It uses an `IWrappedToken` interface.
 
 ```solidity
 interface IWrappedToken {
@@ -132,17 +132,17 @@ contract BridgeDestinationChain {
 }
 ```
 
-- **mintWrapped** : Appelable uniquement par le relayer ; mint des tokens wrapped à l’utilisateur.
-- **burn** : Brûle les tokens wrapped de l’utilisateur et émet `TokenBurned`.
+- **mintWrapped**: Only callable by the relayer; mints wrapped tokens to the user.
+- **burn**: Burns wrapped tokens from the user and emits `TokenBurned`.
 
-> **Note** : Il faut un contrat WrappedToken séparé implémentant `IWrappedToken` (ex : ERC20 avec mint/burn accessibles par le bridge).
+> **Note**: You need a separate WrappedToken contract implementing `IWrappedToken` (e.g., an ERC20 with mint/burn functions accessible by the bridge).
 
-### Relayer Off-chain (relayer.ts)
+### Off-chain Relayer (relayer.ts)
 
-Le relayer écoute les événements sur les deux contrats et automatise les actions cross-chain avec Ethers.js.
+The relayer listens for events on both contracts and automates cross-chain actions using Ethers.js.
 
 ```typescript
-// Écoute des events côté source (lock -> mint)
+// Listen for events on the source (lock -> mint)
 bridgeSourceChain.on("TokenLocked", async (user, amount, destination) => {
   console.log(`[BridgeSource] ${user} locked ${amount} tokens. Minting on destination for ${destination}...`);
   const tx = await bridgeDestinationChain.mintWrapped(destination, amount);
@@ -150,7 +150,7 @@ bridgeSourceChain.on("TokenLocked", async (user, amount, destination) => {
   console.log("Minted wrapped tokens on destination");
 });
 
-// Écoute des events côté destination (burn -> release)
+// Listen for events on the destination (burn -> release)
 bridgeDestinationChain.on("TokenBurned", async (user, amount, destination) => {
   console.log(`[BridgeDestination] ${user} burned ${amount} wrapped tokens. Releasing on source to ${destination}...`);
   const tx = await bridgeSourceChain.release(destination, amount);
@@ -159,102 +159,102 @@ bridgeDestinationChain.on("TokenBurned", async (user, amount, destination) => {
 });
 ```
 
-- Écoute `TokenLocked` et appelle `mintWrapped` sur la destination.
-- Écoute `TokenBurned` et appelle `release` sur la source.
+- Listens for `TokenLocked` and calls `mintWrapped` on the destination.
+- Listens for `TokenBurned` and calls `release` on the source.
 
 ---
 
-## Utilisation pas à pas
+## Step-by-Step Usage
 
-### 1. Démarrer le nœud local Hardhat
+### 1. Start the Local Hardhat Node
 
 ```bash
 npx hardhat node
 ```
 
-Cela lance un serveur JSON-RPC à http://127.0.0.1:8545 avec des comptes de test prédéfinis.
+This starts a JSON-RPC server at http://127.0.0.1:8545 with predefined test accounts.
 
-> **Astuce** : Redémarrez le nœud si vous avez des problèmes de nonce ou d’état (Ctrl+C puis relancez).
+> **Tip**: Restart the node if you encounter nonce or state issues (Ctrl+C then relaunch).
 
-### 2. Déployer les contrats
+### 2. Deploy the Contracts
 
-Dans un nouveau terminal :
+In a new terminal:
 
 ```bash
 npx hardhat run scripts/deploy.ts --network localhost
 ```
 
-Cela déploie MockToken, WrappedToken, BridgeSourceChain et BridgeDestinationChain.
-Copiez les adresses déployées depuis la console.
-Mettez à jour ces adresses dans `relayer.ts`, `relayer-test.ts` et `transfer-tokens.ts`.
+This deploys MockToken, WrappedToken, BridgeSourceChain, and BridgeDestinationChain.
+Copy the deployed addresses from the console.
+Update these addresses in `relayer.ts`, `relayer-test.ts`, and `transfer-tokens.ts`.
 
-- **Deployer** : Compte Hardhat #0 (`0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266`)
-- **Relayer** : Compte #1 (`0x70997970C51812dc3A010C7d01b50e0d17dc79C8`)
+- **Deployer**: Hardhat account #0 (`0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266`)
+- **Relayer**: Account #1 (`0x70997970C51812dc3A010C7d01b50e0d17dc79C8`)
 
-### 3. Transférer des tokens à un utilisateur de test (optionnel mais recommandé)
+### 3. Transfer Tokens to a Test User (Optional but Recommended)
 
-Le deployer possède les MockTokens initiaux. Transférez-en à un compte utilisateur pour les tests :
+The deployer has the initial MockTokens. Transfer some to a user account for testing:
 
 ```bash
 npx hardhat run scripts/transfer-tokens.ts --network localhost
 ```
 
-Utilisateur par défaut : Compte #1 (`0x70997970C51812dc3A010C7d01b50e0d17dc79C8`).
-Cela transfère 100 MockTokens.
+Default user: Account #1 (`0x70997970C51812dc3A010C7d01b50e0d17dc79C8`).
+This transfers 100 MockTokens.
 
-### 4. Lancer les tests unitaires
+### 4. Run Unit Tests
 
 ```bash
 npx hardhat test
 ```
 
-Cela exécute `Bridge.test.ts`, simulant lock/mint et burn/release manuellement (sans relayer).
+This runs `Bridge.test.ts`, simulating lock/mint and burn/release manually (without the relayer).
 
-### 5. Démarrer le relayer
+### 5. Start the Relayer
 
-Le relayer écoute les événements et automatise le bridge. Mettez à jour les adresses dans `relayer.ts`, puis lancez :
+The relayer listens for events and automates the bridge. Update addresses in `relayer.ts`, then run:
 
 ```bash
 npx ts-node relayer.ts
 ```
 
-Il utilise la clé privée du compte #1 comme relayer (autorisé dans les contrats).
+It uses account #1's private key as the relayer (authorized in the contracts).
 
-### 6. Tester le bridge complet
+### 6. Test the Full Bridge Flow
 
-Avec le nœud et le relayer actifs, testez le flux complet (lock → mint via relayer → burn → release via relayer). Mettez à jour les adresses et la clé privée utilisateur dans `relayer-test.ts`, puis lancez :
+With the node and relayer running, test the end-to-end flow (lock → mint via relayer → burn → release via relayer). Update addresses and user private key in `relayer-test.ts`, then run:
 
 ```bash
 npx ts-node .\scripts\relayer-test.ts
 ```
 
-- Approuve/lock 10 tokens, attend le mint, les brûle, attend la release.
-- Résultat attendu : `Test completed successfully!` avec les logs de balance.
+- Approves/locks 10 tokens, waits for mint, burns them, waits for release.
+- Expected output: `Test completed successfully!` with balance logs.
 
-> **En cas d’erreur** ("Only relayer", problèmes de nonce, etc.) :
-> - Vérifiez que la clé du relayer correspond à celle autorisée.
-> - Redémarrez le nœud et redeployez si l’état est corrompu.
-
----
-
-## Sécurité & Limitations
-
-- **Démo simplifiée** : Ajoutez multisig, pause, audits, rate limits pour la prod.
-- **Relayer centralisé** : Pour la prod, envisagez Chainlink, zk-proofs, etc.
-- **Ne jamais utiliser de vrais fonds ou du code non audité !**
+> **If errors occur** ("Only relayer", nonce issues, etc.):
+> - Ensure the relayer key matches the authorized one.
+> - Restart the node and redeploy if the state is corrupted.
 
 ---
 
-## Dépannage
+## Security & Limitations
 
-- **Nonce Errors** : Redémarrez le nœud Hardhat et redeployez.
-- **Insufficient Balance** : Exécutez le script de transfert.
-- **"Only relayer" Revert** : Vérifiez la clé du relayer.
-- **BAD_DATA sur balanceOf** : Vérifiez que les contrats sont bien déployés.
+- **Simplified demo**: Add multisig, pause, audits, rate limits for production.
+- **Centralized relayer**: For production, consider Chainlink, zk-proofs, etc.
+- **Never use real funds or unaudited code!**
 
 ---
 
-## Remerciements
+## Troubleshooting
 
-Inspiré par les concepts de bridge blockchain — contributions bienvenues ! Si ce projet vous aide, n’hésitez pas à mettre une étoile ⭐.
+- **Nonce Errors**: Restart the Hardhat node and redeploy.
+- **Insufficient Balance**: Run the transfer script.
+- **"Only relayer" Revert**: Check the relayer key.
+- **BAD_DATA on balanceOf**: Ensure contracts are deployed.
+
+---
+
+## Acknowledgements
+
+Inspired by blockchain bridge concepts — contributions welcome! If this project helps you, please star the repo ⭐.
 
