@@ -55,10 +55,13 @@ contracts/           # Solidity files
   ├─ BridgeSourceChain.sol # Handles lock/release
   └─ BridgeDestinationChain.sol # Mint/burn wrapped tokens
 scripts/            # TypeScript scripts
-  ├─ deploy.ts            # Deploys all contracts
+  ├─ get-deployed-addresses.ts # Gets deployed contract addresses
   ├─ transfer-tokens.ts   # Transfers MockTokens to a user
   ├─ relayer-test.ts      # Automated full bridge test
   └─ relayer.ts           # Off-chain relayer (listens and relays events)
+ignition/           # Ignition deployment modules
+  └─ modules/
+      └─ BridgeDeployment.ts # Deploys all contracts using Ignition
 test/               # TypeScript unit tests
   └─ Bridge.test.ts       # Contract interaction tests
 hardhat.config.ts   # Hardhat configuration
@@ -181,15 +184,23 @@ This starts a JSON-RPC server at http://127.0.0.1:8545 with predefined test acco
 In a new terminal:
 
 ```bash
-npx hardhat run scripts/deploy.ts --network localhost
+npx hardhat ignition deploy ignition/modules/BridgeDeployment.ts --network localhost
 ```
 
-This deploys MockToken, WrappedToken, BridgeSourceChain, and BridgeDestinationChain.
-Copy the deployed addresses from the console.
+This deploys MockToken, WrappedToken, BridgeSourceChain, and BridgeDestinationChain using Ignition.
+Copy the deployed addresses from the console output.
 Update these addresses in `relayer.ts`, `relayer-test.ts`, and `transfer-tokens.ts`.
 
 - **Deployer**: Hardhat account #0 (`0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266`)
 - **Relayer**: Account #1 (`0x70997970C51812dc3A010C7d01b50e0d17dc79C8`)
+
+> **Note**: Ignition provides better deployment management with dependency tracking and state persistence. You can also use `npx hardhat ignition deploy ignition/modules/BridgeDeployment.ts --network localhost --reset` to force redeployment.
+
+To get the deployed contract addresses after deployment:
+
+```bash
+npx hardhat run scripts/get-deployed-addresses.ts --network localhost
+```
 
 ### 3. Transfer Tokens to a Test User (Optional but Recommended)
 
