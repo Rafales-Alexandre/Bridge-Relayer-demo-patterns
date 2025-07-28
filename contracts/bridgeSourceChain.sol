@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity 0.8.27;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+
+error OnlyRelayer();
 
 contract BridgeSourceChain is Ownable {
     IERC20 public token; // The ERC20 token to bridge
@@ -17,13 +19,13 @@ contract BridgeSourceChain is Ownable {
 
     // User locks tokens to bridge
     function lock(uint256 amount, address destination) external {
-        require(token.transferFrom(msg.sender, address(this), amount), "Transfer failed");
+        token.safeTransferFrom(msg.sender, address(this), amount);
         emit TokenLocked(msg.sender, amount, destination);
     }
 
     // Relayer releases tokens on reverse bridge
     function release(address user, uint256 amount) external {
-        require(msg.sender == relayer, "Only relayer");
-        require(token.transfer(user, amount), "Transfer failed");
+        if(msg.sender != relayer) revert OnlyRelayer();
+        token.safeTransfer(user, amount);
     }
 }

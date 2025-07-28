@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity 0.8.27;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol"; // For wrapped token
-import "@openzeppelin/contracts/access/Ownable.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol"; // For wrapped token
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 contract WrappedToken is ERC20 {
     constructor() ERC20("Wrapped Token", "wTOKEN") {}
@@ -15,6 +15,8 @@ contract WrappedToken is ERC20 {
         _burn(from, amount);
     }
 }
+
+error OnlyRelayer();
 
 contract BridgeDestinationChain is Ownable {
     WrappedToken public wrappedToken; // The wrapped ERC20
@@ -29,7 +31,7 @@ contract BridgeDestinationChain is Ownable {
 
     // Relayer mints wrapped tokens
     function mintWrapped(address user, uint256 amount) external {
-        require(msg.sender == relayer, "Only relayer");
+        if(msg.sender != relayer) revert OnlyRelayer();
         wrappedToken.mint(user, amount);
     }
 
